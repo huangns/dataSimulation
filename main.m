@@ -57,7 +57,7 @@ Tcm_init=[Rcm_init tcm_init;0 0 0 1]
 
 Twi_init=Twc*Tcm_init*Tmi
 
-idt=0.00001;
+idt=0.001;
 idtt=0.01;
 vdt=1/30;
 w{1}=[0 0 0]';
@@ -108,25 +108,31 @@ fprintf(fidqcm,'%f %f %f %f %f\r\n',0.0,qcm_m{1}(1,1),qcm_m{1}(2,1),qcm_m{1}(3,1
 fprintf(fidqiw,'%f %f %f %f %f\r\n',0.0,qiw{1}(1,1),qiw{1}(2,1),qiw{1}(3,1),qiw{1}(4,1));
 
 %fprintf(fidwm,'%f %f %f %f \r\n',0.0,wm{1}(1,1),wm{1}(2,1),wm{1}(3,1));
-
-for t=idt:idt:3-idt
+cilast=1;
+for t=idt:idt:5-idt
 %for t=idt:idt:0.02
-    a{ci}=a{ci-1};
+    if(ci>1000)
+        clast=1000;
+        ci=1;
+    else
+        clast=ci-1;
+    end
+    a{ci}=a{clast};
     
-    w{ci}=w{ci-1};
+    w{ci}=w{clast};
     
     a{ci}(:,:)';
     %atemp =a{ci}(1:3,1)'
     %w{ci}(1:3,1)' 
-    ba{ci}=ba{ci-1}+sig_nba*randn*idt;
-    bw{ci}=bw{ci-1}+sig_nbw*randn*idt;
+    ba{ci}=ba{clast}+sig_nba*randn*idt;
+    bw{ci}=bw{clast}+sig_nbw*randn*idt;
     am{ci}=a{ci}+ba{ci}+sig_na*randn;
     wm{ci}=w{ci}+bw{ci}+sig_nw*randn;
     
     ew=w{ci}(:,:);
     ea=a{ci}(:,:);
-    ewold=w{ci-1}(:,:);
-    eaold=a{ci-1}(:,:);
+    ewold=w{clast}(:,:);
+    eaold=a{clast}(:,:);
     Omega=omegaMatJPL(ew);
     OmegaOld=omegaMatJPL(ewold);
     OmegaMean=omegaMatJPL((ew+ewold)/2);
@@ -141,16 +147,16 @@ for t=idt:idt:3-idt
     end
     
     quat_int=MatExp+1.0/48.0*(Omega*OmegaOld-OmegaOld*Omega)*idt*idt;
-    qcoeffs1=[qiw{ci-1}(2:4,1)',qiw{ci-1}(1,1)]';
+    qcoeffs1=[qiw{clast}(2:4,1)',qiw{clast}(1,1)]';
     qcoeffs2=quat_int*qcoeffs1;
     qiw{ci}=( quatnormalize([qcoeffs2(4,1),qcoeffs2(1:3,1)']) )';
     
-    dv=(quat2dcm(qiw{ci}(:,:)')' * ea +  quat2dcm(qiw{ci-1}(:,:)')'*eaold)/2;
+    dv=(quat2dcm(qiw{ci}(:,:)')' * ea +  quat2dcm(qiw{clast}(:,:)')'*eaold)/2;
     DV{ci}=dv-g;
-    vwi{ci}=vwi{ci-1}(:,:)+(dv-g)*idt;
-    pwi{ci}=pwi{ci-1}(:,:)+(vwi{ci}(:,:)+vwi{ci-1}(:,:))/2.0*idt;
+    vwi{ci}=vwi{clast}(:,:)+(dv-g)*idt;
+    pwi{ci}=pwi{clast}(:,:)+(vwi{ci}(:,:)+vwi{clast}(:,:))/2.0*idt;
     
-    DV{ci}=( vwi{ci}(:,:) + vwi{ci-1}(:,:) )/2.0*idt;
+    DV{ci}=( vwi{ci}(:,:) + vwi{clast}(:,:) )/2.0*idt;
     
 
    
@@ -175,7 +181,7 @@ for t=idt:idt:3-idt
         fprintf(fidqcm,'%f %f %f %f %f \r\n',t,qcm_m{vi}(1,1),qcm_m{vi}(2,1),qcm_m{vi}(3,1), qcm_m{vi}(4,1));
        
        
-        vi=vi+1;
+        %vi=vi+1;
  end
     timesumdt=timesumdt+idt;
  if(timesumdt>0.01)
@@ -197,7 +203,13 @@ for t=idt:idt:3-idt
 end
 
 initv=(5);
-for t=3:idt:5
+for t=5:idt:20
+     if(ci>1000)
+        clast=1000;
+        ci=1;
+    else
+        clast=ci-1;
+    end
    % a{ci}=a{ci-1}(:,:)+[randn*0.01 randn*0.001 randn*0.1]'*0.0000001;
     %a{ci}=[0.5*cos(5*t+1),0.5*sin(5*t-1),-0.5*sin(5*t-2)]'+quat2dcm(qiw{ci-1}(:,:)')*g;
     %(quat2dcm(qiw{ci-1}(:,:)')*g)';
@@ -216,12 +228,12 @@ for t=3:idt:5
    % a{ci}(:,:)';
     %atemp =a{ci}(1:3,1)'
     %w{ci}(1:3,1)' 
-    ba{ci}=ba{ci-1}+sig_nba*randn*idt;
-    bw{ci}=bw{ci-1}+sig_nbw*randn*idt;
+    ba{ci}=ba{clast}+sig_nba*randn*idt;
+    bw{ci}=bw{clast}+sig_nbw*randn*idt;
    
     wm{ci}=w{ci}+bw{ci}+sig_nw*randn;
     ew=w{ci}(:,:);
-    ewold=w{ci-1}(:,:);
+    ewold=w{clast}(:,:);
     Omega=omegaMatJPL(ew);
     OmegaOld=omegaMatJPL(ewold);
     OmegaMean=omegaMatJPL((ew+ewold)/2);
@@ -236,7 +248,7 @@ for t=3:idt:5
     end
     
     quat_int=MatExp+1.0/48.0*(Omega*OmegaOld-OmegaOld*Omega)*idt*idt;
-    qcoeffs1=[qiw{ci-1}(2:4,1)',qiw{ci-1}(1,1)]';
+    qcoeffs1=[qiw{clast}(2:4,1)',qiw{clast}(1,1)]';
     qcoeffs2=quat_int*qcoeffs1;
     qiw{ci}=( quatnormalize([qcoeffs2(4,1),qcoeffs2(1:3,1)']) )';
     %disp('dv');
@@ -246,18 +258,18 @@ for t=3:idt:5
    % [0.4*cos(3*(t-initv)),0.4*cos(3*(t-initv)),0.85*cos(4*(t-initv))]
     am{ci}=a{ci}+ba{ci}+sig_na*randn;
     ea=a{ci}(:,:);
-    eaold=a{ci-1}(:,:);
+    eaold=a{clast}(:,:);
      
-    dv=(quat2dcm(qiw{ci}(:,:)')' * ea +  quat2dcm(qiw{ci-1}(:,:)')'*eaold)/2;
+    dv=(quat2dcm(qiw{ci}(:,:)')' * ea +  quat2dcm(qiw{clast}(:,:)')'*eaold)/2;
     dv';
     %DV{ci}=dv-g;
-    vwi{ci}=vwi{ci-1}(:,:)+(dv-g)*idt;
+    vwi{ci}=vwi{clast}(:,:)+(dv-g)*idt;
     %disp('dv-g:')
     %(dv-g)'
     %disp('vwi');
    % vwi{ci-1}(:,:)';
-    pwi{ci}=pwi{ci-1}(:,:)+( vwi{ci}(:,:) + vwi{ci-1}(:,:) )/2.0*idt;
-    DV{ci}=( vwi{ci}(:,:) + vwi{ci-1}(:,:) )/2.0*idt;
+    pwi{ci}=pwi{clast}(:,:)+( vwi{ci}(:,:) + vwi{clast}(:,:) )/2.0*idt;
+    DV{ci}=( vwi{ci}(:,:) + vwi{clast}(:,:) )/2.0*idt;
 %fprintf(fid,'%f %f %f %f \r\n',t,pwi{ci}(1,1),pwi{ci}(2,1),pwi{ci}(3,1));
     %disp('pwi=');
     timesum=timesum+idt;
@@ -280,7 +292,7 @@ for t=3:idt:5
         fprintf(fidpcm,'%f %f %f %f \r\n',t,pcm_m{vi}(1,1),pcm_m{vi}(2,1),pcm_m{vi}(3,1));
         fprintf(fidqcm,'%f %f %f %f %f \r\n',t,qcm_m{vi}(1,1),qcm_m{vi}(2,1),qcm_m{vi}(3,1), qcm_m{vi}(4,1));
        
-        vi=vi+1;
+      %  vi=vi+1;
     end
     
     %fprintf(fidwi,'%f %f %f %f \r\n',t,pwi{ci}(1,1),pwi{ci}(2,1),pwi{ci}(3,1));
