@@ -12,6 +12,16 @@ fidpcm=fopen('pcm.txt','w');fclose(fidpcm);
 fidpcm = fopen('pcm.txt','a+');
 fidqcm=fopen('qcm.txt','w');fclose(fidqcm);
 fidqcm = fopen('qcm.txt','a+');
+
+fidba=fopen('ba.txt','w');fclose(fidba);
+fidba = fopen('ba.txt','a+');
+fidbw=fopen('bw.txt','w');fclose(fidbw);
+fidbw = fopen('bw.txt','a+');
+fidqiw=fopen('qwi.txt','w');fclose(fidqiw);
+fidqiw = fopen('qwi.txt','a+');
+fidvwi=fopen('vwi.txt','w');fclose(fidvwi);
+fidvwi = fopen('vwi.txt','a+');
+
 qwc=[0.1527 0.3481 -0.8499 0.3649];
 qwc = quatnormalize(qwc);
 Rwc=quat2dcm(qwc);
@@ -47,7 +57,8 @@ Tcm_init=[Rcm_init tcm_init;0 0 0 1]
 
 Twi_init=Twc*Tcm_init*Tmi
 
-idt=0.01;
+idt=0.00001;
+idtt=0.01;
 vdt=1/30;
 w{1}=[0 0 0]';
 a{1}=Twi_init(1:3,1:3)'*g;
@@ -57,18 +68,26 @@ am{1}=a{1}+ba{1}+sig_na*randn;
 
 qiw{1}=(dcm2quat(Twi_init(1:3,1:3)'))';
 pwi{1}=Twi_init(1:3,4);
+vwi{1}=[0,0,0]';
+(dcm2quat(Twi_init(1:3,1:3)'))';
 
 fprintf(fidwi,'%f %f %f %f \r\n',0.0,pwi{1}(1,1),pwi{1}(2,1),pwi{1}(3,1));
 fprintf(fidam,'%f %f %f %f \r\n',0.0,am{1}(1,1),am{1}(2,1),am{1}(3,1));
 fprintf(fidwm,'%f %f %f %f \r\n',0.0,wm{1}(1,1),wm{1}(2,1),wm{1}(3,1));
-vwi{1}=[0,0,0]';
-(dcm2quat(Twi_init(1:3,1:3)'))';
+fprintf(fidba,'%f %f %f %f \r\n',0.0,ba{1}(1,1),ba{1}(2,1),ba{1}(3,1));
+fprintf(fidbw,'%f %f %f %f \r\n',0.0,bw{1}(1,1),bw{1}(2,1),bw{1}(3,1));
+fprintf(fidvwi,'%f %f %f %f \r\n',0.0,vwi{1}(1,1),vwi{1}(2,1),vwi{1}(3,1));
+
+
+
 %init static state
 Rcm{1}=Rcm_init;
 ci=2;
+cii=2;
 vi=2;
 count_v=0;
-timesum=0.00;
+timesum=idt;
+timesumdt=idt;
 
 %vision part
 pcm{1}=tcm_init;
@@ -86,9 +105,12 @@ DV{1}=[0 0 0]';
 
 fprintf(fidpcm,'%f %f %f %f \r\n',0.0,pcm_m{1}(1,1),pcm_m{1}(2,1),pcm_m{1}(3,1));
 fprintf(fidqcm,'%f %f %f %f %f\r\n',0.0,qcm_m{1}(1,1),qcm_m{1}(2,1),qcm_m{1}(3,1),qcm_m{1}(4,1));
+fprintf(fidqiw,'%f %f %f %f %f\r\n',0.0,qiw{1}(1,1),qiw{1}(2,1),qiw{1}(3,1),qiw{1}(4,1));
+
 %fprintf(fidwm,'%f %f %f %f \r\n',0.0,wm{1}(1,1),wm{1}(2,1),wm{1}(3,1));
 
-for t=idt:idt:5-idt
+for t=idt:idt:3-idt
+%for t=idt:idt:0.02
     a{ci}=a{ci-1};
     
     w{ci}=w{ci-1};
@@ -133,7 +155,7 @@ for t=idt:idt:5-idt
 
    
     timesum=timesum+idt;
- if(timesum==0.03)
+ if(timesum>0.03)
         %Twc*Tcm_init*Tmi
         tempTwi=[ (quat2dcm(qiw{ci}(:,:)'))' pwi{ci}(:,:);0 0 0 1];
         temptcm= inv(Twc)*tempTwi*inv(Tmi);
@@ -144,7 +166,7 @@ for t=idt:idt:5-idt
         qcm_m{vi}=dcm2quat(quat2dcm(deltaq_)*quat2dcm(qcm{vi}(:,:)'))';
         
         %tempTwi
-        timesum=0;
+        timesum=idt;
        % pcm_m{vi}(:,:)
        % qcm_m{vi}(:,:)
        
@@ -155,17 +177,27 @@ for t=idt:idt:5-idt
        
         vi=vi+1;
  end
+    timesumdt=timesumdt+idt;
+ if(timesumdt>0.01)
+    fprintf(fidwi,'%f %f %f %f \r\n',t,pwi{ci}(1,1),pwi{ci}(2,1),pwi{ci}(3,1));
+    fprintf(fidam,'%f %f %f %f \r\n',t,am{ci}(1,1),am{ci}(2,1),am{ci}(3,1));
+    fprintf(fidwm,'%f %f %f %f \r\n',t,wm{ci}(1,1),wm{ci}(2,1),wm{ci}(3,1));
     
-fprintf(fidwi,'%f %f %f %f \r\n',t,pwi{ci}(1,1),pwi{ci}(2,1),pwi{ci}(3,1));
-fprintf(fidam,'%f %f %f %f \r\n',t,am{ci}(1,1),am{ci}(2,1),am{ci}(3,1));
-fprintf(fidwm,'%f %f %f %f \r\n',t,wm{ci}(1,1),wm{ci}(2,1),wm{ci}(3,1));
- 
- 
+    fprintf(fidba,'%f %f %f %f \r\n',t,ba{ci}(1,1),ba{ci}(2,1),ba{ci}(3,1));
+    fprintf(fidbw,'%f %f %f %f \r\n',t,bw{ci}(1,1),bw{ci}(2,1),bw{ci}(3,1));
+    fprintf(fidvwi,'%f %f %f %f \r\n',t,vwi{ci}(1,1),vwi{ci}(2,1),vwi{ci}(3,1));
+    fprintf(fidqiw,'%f %f %f %f %f\r\n',t,qiw{ci}(1,1),qiw{ci}(2,1),qiw{ci}(3,1),qiw{ci}(4,1));
+    
+    
+    timesumdt=idt;
+    %cii=cii+1;
+   end
+ %fprintf(fidam,'%f %f %f %f \r\n',t,am{ci}(1,1),am{ci}(2,1),am{ci}(3,1));
     ci=ci+1;
 end
 
 initv=(5);
-for t=5:idt:200
+for t=3:idt:5
    % a{ci}=a{ci-1}(:,:)+[randn*0.01 randn*0.001 randn*0.1]'*0.0000001;
     %a{ci}=[0.5*cos(5*t+1),0.5*sin(5*t-1),-0.5*sin(5*t-2)]'+quat2dcm(qiw{ci-1}(:,:)')*g;
     %(quat2dcm(qiw{ci-1}(:,:)')*g)';
@@ -210,8 +242,8 @@ for t=5:idt:200
     %disp('dv');
    
     a{ci}=quat2dcm(qiw{ci}(:,:)')*[0.4*cos(pi*(t-initv)),0.4*cos(pi*(t-initv)),0.85*cos(pi*(t-initv))]'+quat2dcm(qiw{ci}(:,:)')*g;
-    disp('awi')
-    [0.4*cos(3*(t-initv)),0.4*cos(3*(t-initv)),0.85*cos(4*(t-initv))]
+    %disp('awi')
+   % [0.4*cos(3*(t-initv)),0.4*cos(3*(t-initv)),0.85*cos(4*(t-initv))]
     am{ci}=a{ci}+ba{ci}+sig_na*randn;
     ea=a{ci}(:,:);
     eaold=a{ci-1}(:,:);
@@ -220,8 +252,8 @@ for t=5:idt:200
     dv';
     %DV{ci}=dv-g;
     vwi{ci}=vwi{ci-1}(:,:)+(dv-g)*idt;
-    disp('dv-g:')
-    (dv-g)'
+    %disp('dv-g:')
+    %(dv-g)'
     %disp('vwi');
    % vwi{ci-1}(:,:)';
     pwi{ci}=pwi{ci-1}(:,:)+( vwi{ci}(:,:) + vwi{ci-1}(:,:) )/2.0*idt;
@@ -229,7 +261,7 @@ for t=5:idt:200
 %fprintf(fid,'%f %f %f %f \r\n',t,pwi{ci}(1,1),pwi{ci}(2,1),pwi{ci}(3,1));
     %disp('pwi=');
     timesum=timesum+idt;
-    if(timesum==0.03)
+    if(timesum>0.03)
 
         %Twc*Tcm_init*Tmi
         tempTwi=[ (quat2dcm(qiw{ci}(:,:)'))' pwi{ci}(:,:);0 0 0 1];
@@ -241,7 +273,7 @@ for t=5:idt:200
         qcm_m{vi}=dcm2quat(quat2dcm(deltaq_)*quat2dcm(qcm{vi}(:,:)'))';
         
         %tempTwi
-        timesum=0;
+        timesum=idt;
        % pcm_m{vi}(:,:)
        % qcm_m{vi}(:,:)
        
@@ -251,10 +283,25 @@ for t=5:idt:200
         vi=vi+1;
     end
     
+    %fprintf(fidwi,'%f %f %f %f \r\n',t,pwi{ci}(1,1),pwi{ci}(2,1),pwi{ci}(3,1));
+   % fprintf(fidam,'%f %f %f %f \r\n',t,am{ci}(1,1),am{ci}(2,1),am{ci}(3,1));
+    %fprintf(fidwm,'%f %f %f %f \r\n',t,wm{ci}(1,1),wm{ci}(2,1),wm{ci}(3,1));
+    %    timesumdt=timesumdt+idt;
+    timesumdt=timesumdt+idt;
+    if(timesumdt>0.01)
     fprintf(fidwi,'%f %f %f %f \r\n',t,pwi{ci}(1,1),pwi{ci}(2,1),pwi{ci}(3,1));
     fprintf(fidam,'%f %f %f %f \r\n',t,am{ci}(1,1),am{ci}(2,1),am{ci}(3,1));
     fprintf(fidwm,'%f %f %f %f \r\n',t,wm{ci}(1,1),wm{ci}(2,1),wm{ci}(3,1));
     
+    fprintf(fidba,'%f %f %f %f \r\n',t,ba{ci}(1,1),ba{ci}(2,1),ba{ci}(3,1));
+    fprintf(fidbw,'%f %f %f %f \r\n',t,bw{ci}(1,1),bw{ci}(2,1),bw{ci}(3,1));
+    fprintf(fidvwi,'%f %f %f %f \r\n',t,vwi{ci}(1,1),vwi{ci}(2,1),vwi{ci}(3,1));
+    fprintf(fidqiw,'%f %f %f %f %f\r\n',t,qiw{ci}(1,1),qiw{ci}(2,1),qiw{ci}(3,1),qiw{ci}(4,1));
+    
+    
+    timesumdt=idt;
+%    cii=cii+1;
+    end
     ci=ci+1;
 end
 
@@ -276,3 +323,15 @@ fclose(fidam);
 fclose(fidwm);
 fclose(fidpcm);
 fclose(fidqcm);
+
+
+
+fclose(fidba);
+fclose(fidbw);
+fclose(fidqiw);
+fclose(fidvwi);
+
+
+
+
+
